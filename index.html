@@ -63,7 +63,170 @@ function load(id){var x=JSON.parse(localStorage.getItem('whsInvoices')||'[]').fi
 function removeInvoice(id){if(!confirm('Delete this invoice?'))return;var list=JSON.parse(localStorage.getItem('whsInvoices')||'[]').filter(function(v){return v.id!==id});localStorage.setItem('whsInvoices',JSON.stringify(list));render()}
 function fresh(){editing=null;el('customer').value='';el('phone').value='';el('contact').value='';el('notes').value='Thank you for your business.';el('date').value=new Date().toISOString().slice(0,10);nextNum();el('services').innerHTML='';addService();calc();window.scrollTo(0,0)}
 function preparePrint(){var x=invoiceData();el('pNum').textContent='Invoice # '+(x.num||'');el('pDate').textContent=prettyDate(x.date);el('pCustomer').textContent=x.customer||'Customer';el('pPhone').textContent=x.phone||'';el('pContact').textContent=x.contact||'';el('pServices').innerHTML='';x.services.forEach(function(s){var tr=document.createElement('tr');var td1=document.createElement('td');var td2=document.createElement('td');td1.textContent=s.desc||'Service';td2.textContent=money(s.amount);tr.appendChild(td1);tr.appendChild(td2);el('pServices').appendChild(tr)});if(!x.services.length){var tr=document.createElement('tr');tr.innerHTML='<td>Service</td><td>$0.00</td>';el('pServices').appendChild(tr)}el('pTotal').textContent=money(x.total);el('pNotes').textContent=x.notes||'Thank you for your business.'}
-el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
+var discountBox = document.createElement('div');
+
+discountBox.style.marginTop = '15px';
+
+discountBox.innerHTML = `
+
+<div class="grid">
+
+<div>
+
+<label>Discount Type</label>
+
+<select id="discountType" style="width:100%;padding:12px;border:1px solid #d9dee3;border-radius:10px;background:white;font:inherit">
+
+<option value="fixed">Dollar Amount ($)</option>
+
+<option value="percent">Percentage (%)</option>
+
+</select>
+
+</div>
+
+<div>
+
+<label>Discount (Optional)</label>
+
+<input id="discountValue" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+
+</div>
+
+</div>
+
+<div id="discountSummary" hidden style="margin-top:12px">
+
+<div style="display:flex;justify-content:space-between">
+
+<span>Subtotal</span><span id="discountSubtotal"></span>
+
+</div>
+
+<div style="display:flex;justify-content:space-between">
+
+<span>Discount</span><span id="discountAmount"></span>
+
+</div>
+
+</div>`;
+
+el('total').parentNode.before(discountBox);
+
+function discountDetails(){
+
+ var subtotal=0;
+
+ document.querySelectorAll('.amount').forEach(function(a){
+
+ subtotal+=Math.round((Number(a.value)||0)*100);
+
+ });
+
+ var type=el('discountType').value;
+
+ var value=Math.max(0,Number(el('discountValue').value)||0);
+
+ if(type==='percent')value=Math.min(100,value);
+
+ var amount=Math.min(Math.max(0,subtotal),Math.round(type==='percent'?subtotal*value/100:value*100));
+
+ return {subtotal:subtotal/100,discountType:type,discountValue:value,discountAmount:amount/100,total:(subtotal-amount)/100};
+
+}
+
+calc=function(){
+
+ var x=discountDetails();
+
+ el('discountSubtotal').textContent=money(x.subtotal);
+
+ el('discountAmount').textContent='-'+money(x.discountAmount);
+
+ el('discountSummary').hidden=!x.discountAmount;
+
+ el('total').textContent=money(x.total);
+
+ return x.total;
+
+};
+
+var originalInvoiceData=invoiceData;
+
+invoiceData=function(){
+
+ return Object.assign(originalInvoiceData(),discountDetails());
+
+};
+
+var originalLoad=load;
+
+load=function(id){
+
+ var x=JSON.parse(localStorage.getItem('whsInvoices')||'[]').find(function(v){return v.id===id});
+
+ if(!x)return;
+
+ el('discountType').value=x.discountType==='percent'?'percent':'fixed';
+
+ el('discountValue').value=x.discountValue||'';
+
+ originalLoad(id);
+
+ calc();
+
+};
+
+var originalFresh=fresh;
+
+fresh=function(){
+
+ el('discountType').value='fixed';
+
+ el('discountValue').value='';
+
+ originalFresh();
+
+};
+
+var originalPreparePrint=preparePrint;
+
+preparePrint=function(){
+
+ originalPreparePrint();
+
+ var x=discountDetails();
+
+ if(x.discountAmount>0){
+
+ [['Subtotal',money(x.subtotal)],
+
+ ['Discount'+(x.discountType==='percent'?' ('+x.discountValue+'%)':''),'-'+money(x.discountAmount)]].forEach(function(pair){
+
+ var tr=document.createElement('tr');
+
+ pair.forEach(function(v){
+
+ var td=document.createElement('td');
+
+ td.textContent=v;
+
+ tr.appendChild(td);
+
+ });
+
+ el('pServices').appendChild(tr);
+
+ });
+
+ }
+
+};
+
+el('discountType').addEventListener('change',calc);
+
+el('discountValue').addEventListener
+  el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
 })();
 </script>
 </body></html>
