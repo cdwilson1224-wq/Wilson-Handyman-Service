@@ -353,6 +353,275 @@ shareButton.addEventListener('click',async function(){
  }
 
 });
+
+
+var newPdfButton=shareButton.cloneNode(true);
+
+shareButton.replaceWith(newPdfButton);
+
+newPdfButton.textContent='Create & Share Invoice';
+
+el('print').style.display='none';
+
+newPdfButton.addEventListener('click',async function(){
+
+try{
+
+if(!window.jspdf){
+
+alert('PDF library is loading. Try again.');
+
+return;
+
+}
+
+var x=invoiceData();
+
+var doc=new window.jspdf.jsPDF({format:'letter'});
+
+var w=215.9;
+
+var green='#233B34';
+
+var gold='#C9AE77';
+
+var y=48;
+
+function txt(t,a,b,size,bold,color,align){
+
+doc.setFont('helvetica',bold?'bold':'normal');
+
+doc.setFontSize(size);
+
+doc.setTextColor(color||'#222222');
+
+doc.text(String(t||''),a,b,{align:align||'left'});
+
+}
+
+function header(){
+
+doc.setFillColor(green);
+
+doc.rect(0,0,w,36,'F');
+
+doc.setDrawColor(gold);
+
+doc.setLineWidth(0.7);
+
+doc.roundedRect(12,7,24,22,2,2,'S');
+
+doc.setDrawColor('#FFFFFF');
+
+doc.setLineWidth(2);
+
+doc.line(17,19,29,10);
+
+doc.line(18,10,30,19);
+
+doc.line(16,10,21,7.5);
+
+doc.line(28,10,32,8);
+
+txt('WHS',24,25,10,true,gold,'center');
+
+txt('Wilson Handyman Service',42,16,19,true,'#FFFFFF');
+
+txt('REPAIR - MAINTENANCE - SERVICE',42,24,9,false,'#FFFFFF');
+
+doc.setFillColor(gold);
+
+doc.rect(0,36,w,1.5,'F');
+
+}
+
+function room(h){
+
+if(y+h>253){
+
+doc.addPage();
+
+header();
+
+y=48;
+
+}
+
+}
+
+function wrap(t,a,width,size,bold){
+
+doc.setFontSize(size);
+
+doc.setFont('helvetica',bold?'bold':'normal');
+
+doc.splitTextToSize(String(t||''),width).forEach(function(s){
+
+room(6);
+
+txt(s,a,y,size,bold);
+
+y+=6;
+
+});
+
+}
+
+header();
+
+txt('BILL TO',15,51,10,true,green);
+
+txt('INVOICE',201,53,23,true,green,'right');
+
+txt('#'+x.num,201,62,14,true,green,'right');
+
+txt(prettyDate(x.date),201,70,10,false,'#666666','right');
+
+y=62;
+
+wrap(x.customer,15,100,13,true);
+
+if(x.phone)wrap(x.phone,15,100,10,false);
+
+if(x.contact)wrap(x.contact,15,100,10,false);
+
+y=Math.max(y+10,87);
+
+function tableHead(){
+
+doc.setFillColor(green);
+
+doc.rect(15,y,186,10,'F');
+
+txt('SERVICE DESCRIPTION',19,y+6.5,10,true,'#FFFFFF');
+
+txt('AMOUNT',197,y+6.5,10,true,'#FFFFFF','right');
+
+y+=10;
+
+}
+
+tableHead();
+
+x.services.forEach(function(s,i){
+
+doc.setFontSize(11);
+
+doc.setFont('helvetica','normal');
+
+var lines=doc.splitTextToSize(s.desc||'Service',132);
+
+lines.forEach(function(t,j){
+
+if(y+9>253){
+
+doc.addPage();
+
+header();
+
+y=48;
+
+tableHead();
+
+}
+
+doc.setFillColor(i%2===0?'#F1F4F2':'#FFFFFF');
+
+doc.rect(15,y,186,9,'F');
+
+txt(t,19,y+6,11,false);
+
+if(j===0)txt(money(s.amount),197,y+6,11,false,'#222222','right');
+
+y+=9;
+
+});
+
+});
+
+y+=12;
+
+room(48);
+
+txt('Subtotal',126,y,11,false);
+
+txt(money(x.subtotal),197,y,11,false,'#222222','right');
+
+y+=8;
+
+if(x.discountAmount>0){
+
+txt('Discount'+(x.discountType==='percent'?' ('+x.discountValue+'%)':''),126,y,11,false,green);
+
+txt('-'+money(x.discountAmount),197,y,11,true,green,'right');
+
+y+=8;
+
+}
+
+doc.setFillColor(green);
+
+doc.roundedRect(119,y,82,16,2,2,'F');
+
+txt('TOTAL',124,y+10,12,true,'#FFFFFF');
+
+txt(money(x.total),196,y+10,18,true,'#FFFFFF','right');
+
+y+=30;
+
+room(20);
+
+doc.setDrawColor(gold);
+
+doc.setLineWidth(0.6);
+
+doc.line(15,y,201,y);
+
+y+=10;
+
+wrap(x.notes||'Thank you for your business!',15,186,11,false);
+
+var pages=doc.getNumberOfPages();
+
+for(var p=1;p<=pages;p++){
+
+doc.setPage(p);
+
+txt('Wilson Handyman Service',108,270,9,false,green,'center');
+
+}
+
+var name='Invoice-'+String(x.num).replace(/[^a-zA-Z0-9-]/g,'')+'.pdf';
+
+var file=new File([doc.output('blob')],name,{type:'application/pdf'});
+
+if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+
+try{
+
+await navigator.share({files:[file]});
+
+}catch(e){
+
+if(e.name!=='AbortError')doc.save(name);
+
+}
+
+}else{
+
+doc.save(name);
+
+}
+
+}catch(e){
+
+alert('Unable to create PDF: '+e.message);
+
+}
+
+});
+
+
   el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
 })();
 </script>
