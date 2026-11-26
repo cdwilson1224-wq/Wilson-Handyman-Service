@@ -622,6 +622,114 @@ alert('Unable to create PDF: '+e.message);
 });
 
 
+
+var serviceDateBox=document.createElement('div');
+
+serviceDateBox.className='full';
+
+serviceDateBox.innerHTML='<label>Date of Service</label><input id="serviceDate" type="date">';
+
+el('date').parentNode.parentNode.appendChild(serviceDateBox);
+
+var previousInvoiceData=invoiceData;
+
+invoiceData=function(){
+
+var x=previousInvoiceData();
+
+x.serviceDate=el('serviceDate').value;
+
+return x;
+
+};
+
+var previousLoad=load;
+
+load=function(id){
+
+previousLoad(id);
+
+var list=JSON.parse(localStorage.getItem('whsInvoices')||'[]');
+
+var x=list.find(function(v){return v.id===id});
+
+el('serviceDate').value=x&&x.serviceDate?x.serviceDate:'';
+
+};
+
+var previousFresh=fresh;
+
+fresh=function(){
+
+previousFresh();
+
+el('serviceDate').value='';
+
+};
+
+newPdfButton.addEventListener('click',function(){
+
+if(!window.jspdf)return;
+
+var OriginalPDF=window.jspdf.jsPDF;
+
+window.jspdf.jsPDF=function(options){
+
+var doc=new OriginalPDF(options);
+
+var originalText=doc.text;
+
+doc.text=function(t,a,b,o){
+
+var result=originalText.apply(doc,arguments);
+
+if(t==='REPAIR - MAINTENANCE - SERVICE'){
+
+doc.setFont('helvetica','normal');
+
+doc.setFontSize(9);
+
+doc.setTextColor('#C9AE77');
+
+originalText.call(doc,'(501) 529-5065  |  wilson5817@att.net',42,31);
+
+}
+
+if(t===prettyDate(el('date').value)&&a===201&&b===70){
+
+doc.setFillColor('#FFFFFF');
+
+doc.rect(112,65,90,8,'F');
+
+doc.setFontSize(10);
+
+doc.setTextColor('#666666');
+
+originalText.call(doc,'Invoice Date: '+t,201,70,{align:'right'});
+
+doc.setTextColor('#233B34');
+
+originalText.call(doc,'Date of Service: '+(prettyDate(el('serviceDate').value)||'Not specified'),201,78,{align:'right'});
+
+}
+
+return result;
+
+};
+
+return doc;
+
+};
+
+setTimeout(function(){
+
+window.jspdf.jsPDF=OriginalPDF;
+
+},0);
+
+},true);
+
+
   el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
 })();
 </script>
