@@ -226,6 +226,133 @@ preparePrint=function(){
 el('discountType').addEventListener('change',calc);
 
 el('discountValue').addEventListener('input',calc);
+ var pdfLibrary=document.createElement('script');
+
+pdfLibrary.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+
+document.head.appendChild(pdfLibrary);
+
+var shareButton=document.createElement('button');
+
+shareButton.type='button';
+
+shareButton.textContent='Create & Share PDF';
+
+el('print').before(shareButton);
+
+shareButton.addEventListener('click',async function(){
+
+ try{
+
+ if(!window.jspdf){
+
+ alert('PDF library is loading. Please try again.');
+
+ return;
+
+ }
+
+ var x=invoiceData();
+
+ var doc=new window.jspdf.jsPDF();
+
+ var y=20;
+
+ function line(text,size,bold){
+
+ doc.setFontSize(size||11);
+
+ doc.setFont('helvetica',bold?'bold':'normal');
+
+ var lines=doc.splitTextToSize(String(text),180);
+
+ lines.forEach(function(t){
+
+ if(y>275){doc.addPage();y=20;}
+
+ doc.text(t,15,y);
+
+ y+=7;
+
+ });
+
+ }
+
+ line('Wilson Handyman Service',20,true);
+
+ line('REPAIR - MAINTENANCE - SERVICE',10);
+
+ y+=5;
+
+ line('INVOICE # '+x.num,16,true);
+
+ line(prettyDate(x.date));
+
+ y+=5;
+
+ line('Bill To:',12,true);
+
+ line(x.customer);
+
+ if(x.phone)line(x.phone);
+
+ if(x.contact)line(x.contact);
+
+ y+=5;
+
+ line('Services',14,true);
+
+ x.services.forEach(function(s){
+
+ line(s.desc+' - '+money(s.amount));
+
+ });
+
+ y+=5;
+
+ line('Subtotal: '+money(x.subtotal));
+
+ if(x.discountAmount>0){
+
+ line('Discount'+(x.discountType==='percent'?' ('+x.discountValue+'%)':'')+': -'+money(x.discountAmount));
+
+ }
+
+ line('Total: '+money(x.total),16,true);
+
+ y+=5;
+
+ line(x.notes||'Thank you for your business.');
+
+ var name='Invoice-'+String(x.num).replace(/[^a-zA-Z0-9-]/g,'')+'.pdf';
+
+ var file=new File([doc.output('blob')],name,{type:'application/pdf'});
+
+ if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+
+ try{
+
+ await navigator.share({files:[file]});
+
+ }catch(e){
+
+ if(e.name!=='AbortError')doc.save(name);
+
+ }
+
+ }else{
+
+ doc.save(name);
+
+ }
+
+ }catch(e){
+
+ alert('Unable to create PDF: '+e.message);
+
+ }
+
+});
   el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
 })();
 </script>
