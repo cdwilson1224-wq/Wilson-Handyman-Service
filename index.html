@@ -225,7 +225,7 @@ preparePrint=function(){
 
 el('discountType').addEventListener('change',calc);
 
-el('discountValue').addEventListener
+el('discountValue').addEventListener('input',calc);
   el('addService').addEventListener('click',function(){addService()});el('save').addEventListener('click',save);el('print').addEventListener('click',function(){preparePrint();window.print()});el('new').addEventListener('click',fresh);window.addEventListener('beforeprint',preparePrint);fresh();render();
 })();
 </script>
